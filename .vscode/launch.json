@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Warehouse: Web app",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "Warehouse: Terminal menu",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/warehouse_tracker.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
