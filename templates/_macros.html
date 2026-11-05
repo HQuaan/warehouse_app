@@ -1,0 +1,16 @@
+{% macro status_badge(s) %}<span class="badge st-{{ s|lower }}">{{ s.replace('_', ' ') }}</span>{% endmacro %}
+
+{% macro move_badge(t) %}<span class="badge mv-{{ t|lower }}">{{ t }}</span>{% endmacro %}
+
+{% macro qty_signed(r) -%}
+  {%- if r.type == 'OUT' -%}<span class="neg">−{{ r.qty }}</span>
+  {%- elif r.type == 'IN' -%}<span class="pos">+{{ r.qty }}</span>
+  {%- elif r.type == 'ADJUST' -%}<span class="{{ 'pos' if r.qty > 0 else 'neg' }}">{{ '+' if r.qty > 0 }}{{ r.qty }}</span>
+  {%- else -%}{{ r.qty }}{%- endif -%}
+{%- endmacro %}
+
+{% macro usage_bar(used, cap) %}
+  {% set pct = (100 * used / cap) if cap else 0 %}
+  <div class="bar"><div class="fill {{ 'hot' if pct >= 90 else ('warm' if pct >= 70) }}" style="width: {{ [pct, 100]|min }}%"></div></div>
+  <span class="muted small">{{ used }} / {{ cap }} · {{ '%.0f'|format(pct) }}%</span>
+{% endmacro %}

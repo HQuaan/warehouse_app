@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Inventory{% endblock %}
+{% block heading %}Inventory{% endblock %}
+{% block actions %}
+  <form class="search" method="get"><input name="q" value="{{ q }}" placeholder="Search SKU or name…"><button class="btn ghost">Search</button></form>
+{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>Stock by product</h2>
+  <p class="muted small">“Reserved” is held for open shipments that haven't left yet. “Available” is what you can still promise.</p>
+  <table>
+    <thead><tr><th>SKU</th><th>Name</th><th class="num">On hand</th><th class="num">Reserved</th><th class="num">Available</th><th>Unit</th><th class="num">Min</th><th></th></tr></thead>
+    <tbody>
+    {% for p in rows %}
+      {% set reserved = p.total - p.available %}
+      <tr>
+        <td><a href="{{ url_for('inventory', sku=p.sku) }}#locations">{{ p.sku }}</a></td>
+        <td>{{ p.name }}</td>
+        <td class="num">{{ p.total }}</td>
+        <td class="num">{{ reserved if reserved else '–' }}</td>
+        <td class="num"><strong>{{ p.available }}</strong></td>
+        <td>{{ p.unit }}</td>
+        <td class="num">{{ mins[p.sku] }}</td>
+        <td>{% if p.total <= mins[p.sku] %}<span class="badge low">Low</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">{{ 'No products match “' ~ q ~ '”.' if q else 'No products yet.' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card" id="locations">
+  <h2>Stock by location {% if sku %}<span class="chip">{{ sku }} <a href="{{ url_for('inventory') }}#locations">✕</a></span>{% endif %}</h2>
+  <table>
+    <thead><tr><th>Location</th><th>SKU</th><th class="num">Qty</th></tr></thead>
+    <tbody>
+    {% for r in by_location %}
+      <tr><td>{{ r.location }}</td><td><a href="{{ url_for('inventory', sku=r.sku) }}#locations">{{ r.sku }}</a></td><td class="num">{{ r.qty }}</td></tr>
+    {% else %}
+      <tr><td colspan="3" class="muted">No stock on any shelf{{ ' for ' ~ sku if sku }}.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

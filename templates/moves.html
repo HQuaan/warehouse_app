@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Stock moves{% endblock %}
+{% block heading %}Stock moves{% endblock %}
+
+{% macro sku_select(name="sku") %}
+  <select name="{{ name }}" required>
+    <option value="">Choose a product…</option>
+    {% for p in products %}<option value="{{ p.sku }}">{{ p.sku }} · {{ p.name }} ({{ p.total }} on hand)</option>{% endfor %}
+  </select>
+{% endmacro %}
+
+{% macro loc_select(name, first="Choose a location…", required=true) %}
+  <select name="{{ name }}" {{ 'required' if required }}>
+    <option value="">{{ first }}</option>
+    {% for l in locations %}<option value="{{ l.code }}">{{ l.code }} · {{ l.used }}/{{ l.capacity }} used</option>{% endfor %}
+  </select>
+{% endmacro %}
+
+{% block content %}
+{% if not products or not locations %}
+  <div class="flash info">Start by adding at least one product and one location below, or <a href="{{ url_for('imports') }}">import a file</a>, which creates them for you.</div>
+{% endif %}
+
+<div class="grid3">
+  <form class="card" method="post" action="{{ url_for('moves_receive') }}">
+    <h2><span class="dot in"></span>Receive</h2>
+    <p class="muted small">Goods arriving into the warehouse.</p>
+    <label>Product {{ sku_select() }}</label>
+    <label>Quantity <input name="qty" type="number" min="1" required></label>
+    <label>Into location {{ loc_select("location") }}</label>
+    <label>PO / note <input name="ref" placeholder="e.g. PO-1001"></label>
+    <button class="btn">Receive</button>
+  </form>
+
+  <form class="card" method="post" action="{{ url_for('moves_issue') }}">
+    <h2><span class="dot out"></span>Issue</h2>
+    <p class="muted small">Take stock out without a shipment (damaged, internal use…).</p>
+    <label>Product {{ sku_select() }}</label>
+    <label>Quantity <input name="qty" type="number" min="1" required></label>
+    <label>From location {{ loc_select("location", "Auto-pick (fullest shelf first)", false) }}</label>
+    <label>Reason / reference <input name="ref" placeholder="e.g. DAMAGED"></label>
+    <button class="btn">Issue</button>
+  </form>
+
+  <form class="card" method="post" action="{{ url_for('moves_transfer') }}">
+    <h2><span class="dot tr"></span>Transfer</h2>
+    <p class="muted small">Move stock from one shelf to another.</p>
+    <label>Product {{ sku_select() }}</label>
+    <label>Quantity <input name="qty" type="number" min="1" required></label>
+    <label>From {{ loc_select("from_loc") }}</label>
+    <label>To {{ loc_select("to_loc") }}</label>
+    <button class="btn">Transfer</button>
+  </form>
+</div>
+
+<div class="grid2">
+  <form class="card" method="post" action="{{ url_for('moves_product') }}">
+    <h2>Add product</h2>
+    <div class="row2">
+      <label>SKU <input name="sku" required placeholder="SKU010"></label>
+      <label>Unit <input name="unit" placeholder="pcs"></label>
+    </div>
+    <label>Name <input name="name" required placeholder="Wireless Keyboard"></label>
+    <label>Minimum stock <input name="min_stock" type="number" min="0" value="0"></label>
+    <button class="btn ghost">Add product</button>
+  </form>
+
+  <form class="card" method="post" action="{{ url_for('moves_location') }}">
+    <h2>Add location</h2>
+    <div class="row2">
+      <label>Code <input name="code" required placeholder="A-01-03"></label>
+      <label>Zone <input name="zone" placeholder="A"></label>
+    </div>
+    <label>Capacity (units) <input name="capacity" type="number" min="1" value="1000"></label>
+    <p class="muted small">Tip: Zone-Aisle-Level makes codes easy to find.</p>
+    <button class="btn ghost">Add location</button>
+  </form>
+</div>
+{% endblock %}

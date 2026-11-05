@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, move_badge, qty_signed, usage_bar %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('moves') }}">+ Receive stock</a>{% endblock %}
+
+{% block content %}
+{% if empty %}
+<div class="card hero">
+  <h2>Your warehouse is empty</h2>
+  <p class="muted">Add products and locations on <a href="{{ url_for('moves') }}">Stock moves</a>,
+     <a href="{{ url_for('imports') }}">import a CSV or Excel file</a>, or load sample data to look around.</p>
+  <form method="post" action="{{ url_for('demo') }}"><button class="btn">Load sample data</button></form>
+</div>
+{% endif %}
+
+<div class="kpis">
+  <div class="kpi"><span>Products</span><strong>{{ n_products }}</strong></div>
+  <div class="kpi"><span>Units in stock</span><strong>{{ "{:,}".format(total_units) }}</strong></div>
+  <div class="kpi {{ 'warn' if low }}"><span>Low-stock items</span><strong>{{ low|length }}</strong></div>
+  <div class="kpi"><span>Open shipments</span><strong>{{ open_shipments|length }}</strong></div>
+</div>
+
+<div class="grid2">
+  <section class="card">
+    <h2>Low stock</h2>
+    {% if low %}
+    <table><thead><tr><th>SKU</th><th>Name</th><th class="num">On hand</th><th class="num">Min</th></tr></thead>
+      <tbody>{% for r in low %}
+        <tr><td><a href="{{ url_for('inventory', sku=r.sku) }}">{{ r.sku }}</a></td><td>{{ r.name }}</td>
+            <td class="num neg">{{ r.total }}</td><td class="num">{{ r.min_stock }}</td></tr>
+      {% endfor %}</tbody></table>
+    {% else %}<p class="muted">Everything is above its minimum. 👍</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Location usage</h2>
+    {% for l in locations %}
+      <div class="loc-row"><strong>{{ l.code }}</strong> <span class="muted small">{{ l.zone }}</span>{{ usage_bar(l.used, l.capacity) }}</div>
+    {% else %}<p class="muted">No locations yet.</p>{% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>Open shipments</h2>
+    {% if open_shipments %}
+    <table><thead><tr><th>Shipment</th><th>Customer</th><th>Status</th></tr></thead>
+      <tbody>{% for s in open_shipments %}
+        <tr><td><a href="{{ url_for('shipments_detail', sid=s.id) }}">{{ s.id }}</a></td><td>{{ s.customer }}</td><td>{{ status_badge(s.status) }}</td></tr>
+      {% endfor %}</tbody></table>
+    {% else %}<p class="muted">No open shipments.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Recent movements <a class="small" href="{{ url_for('history') }}">See all</a></h2>
+    {% if recent %}
+    <table><thead><tr><th>Time</th><th>Type</th><th>SKU</th><th class="num">Qty</th></tr></thead>
+      <tbody>{% for r in recent %}
+        <tr><td class="muted small">{{ r.ts }}</td><td>{{ move_badge(r.type) }}</td><td>{{ r.sku }}</td><td class="num">{{ qty_signed(r) }}</td></tr>
+      {% endfor %}</tbody></table>
+    {% else %}<p class="muted">Nothing has moved yet.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

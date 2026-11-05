@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Import file{% endblock %}
+{% block heading %}Import from CSV / Excel{% endblock %}
+
+{% macro summary(res, title) %}
+  <div class="kpis">
+    <div class="kpi"><span>Rows OK</span><strong>{{ res.ok }}</strong></div>
+    <div class="kpi {{ 'warn' if res.errors }}"><span>Rows with errors</span><strong>{{ res.errors|length }}</strong></div>
+    <div class="kpi"><span>Units changed</span><strong>{{ "{:,}".format(res.units) }}</strong></div>
+    <div class="kpi"><span>New products / locations</span><strong>{{ res.new_products|unique|list|length }} / {{ res.new_locations|unique|list|length }}</strong></div>
+  </div>
+  {% if res.new_products %}<p class="small"><strong>New products:</strong> {{ res.new_products|unique|join(', ') }}</p>{% endif %}
+  {% if res.new_locations %}<p class="small"><strong>New locations:</strong> {{ res.new_locations|unique|join(', ') }}</p>{% endif %}
+{% endmacro %}
+
+{% block content %}
+
+{% if result %}
+  {# ---------- after applying ---------- #}
+  <section class="card">
+    <h2>✅ Imported {{ filename }}</h2>
+    {{ summary(result) }}
+    {% if result.errors %}
+      <h3>Skipped rows</h3>
+      <table><thead><tr><th class="num">Row</th><th>Problem</th></tr></thead>
+        <tbody>{% for n, msg in result.errors %}<tr><td class="num">{{ n }}</td><td class="neg">{{ msg }}</td></tr>{% endfor %}</tbody></table>
+      <p class="muted small">Fix these rows in your file and import just them again.</p>
+    {% endif %}
+    <div class="btn-row"><a class="btn" href="{{ url_for('inventory') }}">View inventory</a><a class="btn ghost" href="{{ url_for('imports') }}">Import another file</a></div>
+  </section>
+
+{% elif preview %}
+  {# ---------- preview, nothing changed yet ---------- #}
+  <section class="card">
+    <h2>Preview: {{ filename }} <span class="chip">{{ 'Stock count (set quantities)' if mode == 'set' else 'Receive (add quantities)' }}</span></h2>
+    <p class="muted small">Nothing has been changed yet. Check the rows below, then confirm.</p>
+    {{ summary(preview) }}
+    {% if ignored %}<p class="small muted">Ignored columns: {{ ignored|join(', ') }}</p>{% endif %}
+
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th class="num">Row</th><th>SKU</th><th>Name</th><th class="num">Qty</th><th>Location</th><th>Ref</th><th>Result</th></tr></thead>
+      <tbody>
+      {% for n, r in rows %}
+        <tr class="{{ 'row-err' if n in errors }}">
+          <td class="num muted">{{ n }}</td><td>{{ r.sku }}</td><td>{{ r.name }}</td><td class="num">{{ r.qty }}</td>
+          <td>{{ r.location }}</td><td class="small">{{ r.ref }}</td>
+          <td>{% if n in errors %}<span class="neg small">✕ {{ errors[n] }}</span>{% else %}<span class="pos small">✓ OK</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if n_rows > rows|length %}<p class="muted small">Showing the first {{ rows|length }} of {{ n_rows }} rows.</p>{% endif %}
+
+    <div class="btn-row">
+      {% if preview.ok %}
+      <form method="post" action="{{ url_for('imports_apply') }}">
+        <input type="hidden" name="token" value="{{ token }}">
+        <input type="hidden" name="mode" value="{{ mode }}">
+        <input type="hidden" name="filename" value="{{ filename }}">
+        <button class="btn">Import {{ preview.ok }} row{{ 's' if preview.ok != 1 }}{{ ' (skip errors)' if preview.errors }}</button>
+      </form>
+      {% endif %}
+      <a class="btn ghost" href="{{ url_for('imports') }}">Cancel</a>
+    </div>
+  </section>
+
+{% else %}
+  {# ---------- upload form ---------- #}
+  <div class="grid-side">
+    <form class="card" method="post" action="{{ url_for('imports_preview') }}" enctype="multipart/form-data">
+      <h2>Upload a file</h2>
+      <label class="drop">
+        <input type="file" name="file" accept=".csv,.xlsx,.xlsm" required onchange="this.closest('.drop').querySelector('b').textContent = this.files[0]?.name || 'Choose a .csv or .xlsx file'">
+        <span class="drop-ico">⇪</span><b>Choose a .csv or .xlsx file</b><span class="muted small">or drag it here</span>
+      </label>
+      <p class="label">What is this file?</p>
+      <label class="radio"><input type="radio" name="mode" value="receive" checked>
+        <span><strong>Receive</strong>: a delivery arrived. Add these quantities to stock.</span></label>
+      <label class="radio"><input type="radio" name="mode" value="set">
+        <span><strong>Stock count</strong>: I counted the shelves. Set stock to these numbers.</span></label>
+      <button class="btn">Preview import</button>
+      <p class="muted small">You'll see a preview first. Nothing changes until you confirm.</p>
+    </form>
+
+    <section class="card">
+      <h2>File format</h2>
+      <p class="small">First row = headers. Column order doesn't matter, and common names are recognized.</p>
+      <table class="small">
+        <thead><tr><th>Column</th><th>Required</th><th>Also accepted</th></tr></thead>
+        <tbody>
+          <tr><td><strong>SKU</strong></td><td>✅</td><td>Item Code, Code, Product Code</td></tr>
+          <tr><td><strong>Quantity</strong></td><td>✅</td><td>Qty, Amount, Count, Stock</td></tr>
+          <tr><td><strong>Location</strong></td><td>✅</td><td>Bin, Shelf, Loc</td></tr>
+          <tr><td>Name</td><td>New SKUs</td><td>Product Name, Item, Description</td></tr>
+          <tr><td>Unit, Min Stock</td><td></td><td>UOM, Reorder Level</td></tr>
+          <tr><td>Zone, Capacity</td><td></td><td>For new locations</td></tr>
+          <tr><td>Ref</td><td></td><td>PO, Reference, Notes</td></tr>
+        </tbody>
+      </table>
+      <p class="muted small">New products and locations are created automatically. Sample files are in the <code>samples</code> folder.</p>
+    </section>
+  </div>
+{% endif %}
+{% endblock %}

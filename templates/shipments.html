@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}Shipments{% endblock %}
+{% block heading %}Shipments{% endblock %}
+
+{% block content %}
+<div class="grid-side">
+  <section class="card">
+    <div class="chips">
+      <a class="chip {{ 'on' if not status }}" href="{{ url_for('shipments') }}">All</a>
+      {% for st in statuses %}<a class="chip {{ 'on' if status == st }}" href="{{ url_for('shipments', status=st) }}">{{ st.replace('_', ' ')|title }}</a>{% endfor %}
+    </div>
+    <table>
+      <thead><tr><th>Shipment</th><th>Customer</th><th>Carrier</th><th>Tracking #</th><th>Status</th><th>Updated</th></tr></thead>
+      <tbody>
+      {% for s in shipments %}
+        <tr class="clickable" onclick="location.href='{{ url_for('shipments_detail', sid=s.id) }}'">
+          <td><a href="{{ url_for('shipments_detail', sid=s.id) }}">{{ s.id }}</a></td>
+          <td>{{ s.customer }}</td><td>{{ s.carrier or '–' }}</td><td class="small">{{ s.tracking_no or '–' }}</td>
+          <td>{{ status_badge(s.status) }}</td><td class="muted small">{{ s.updated_at }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">No shipments{{ ' with this status' if status }}.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <form class="card" method="post" action="{{ url_for('shipments_create') }}">
+    <h2>New shipment</h2>
+    <label>Customer <input name="customer" required></label>
+    <label>Address <input name="address" required></label>
+    <label>Carrier <input name="carrier" placeholder="UPS, FedEx…"></label>
+
+    <p class="label">Items</p>
+    <div id="items"></div>
+    <button type="button" class="btn ghost small-btn" onclick="addItem()">+ Add item</button>
+    <p class="muted small">Only <em>available</em> stock can be ordered. It's reserved now and deducted when the shipment is marked Shipped.</p>
+    <button class="btn">Create shipment</button>
+
+    <template id="item-tpl">
+      <div class="item-row">
+        <select name="sku" required>
+          <option value="">Product…</option>
+          {% for p in products %}<option value="{{ p.sku }}" {{ 'disabled' if p.available <= 0 }}>{{ p.sku }} · {{ p.name }} ({{ p.available }} avail.)</option>{% endfor %}
+        </select>
+        <input name="qty" type="number" min="1" placeholder="Qty" required>
+        <button type="button" class="icon-btn" title="Remove" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    </template>
+  </form>
+</div>
+
+<script>
+  function addItem() {
+    const row = document.getElementById('item-tpl').content.cloneNode(true);
+    document.getElementById('items').appendChild(row);
+  }
+  addItem();
+</script>
+{% endblock %}

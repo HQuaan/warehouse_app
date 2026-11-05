@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import move_badge, qty_signed %}
+{% block title %}History{% endblock %}
+{% block heading %}Movement history{% endblock %}
+{% block actions %}
+  <form class="search" method="get">
+    <input name="sku" value="{{ sku }}" placeholder="SKU">
+    <select name="type">
+      <option value="">All types</option>
+      {% for t in ['IN', 'OUT', 'TRANSFER', 'ADJUST'] %}<option {{ 'selected' if mtype == t }}>{{ t }}</option>{% endfor %}
+    </select>
+    <button class="btn ghost">Filter</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+<section class="card">
+  <table>
+    <thead><tr><th>Time</th><th>Type</th><th>SKU</th><th class="num">Qty</th><th>From</th><th>To</th><th>Reference</th><th>By</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td class="muted small">{{ r.ts }}</td><td>{{ move_badge(r.type) }}</td><td>{{ r.sku }}</td>
+          <td class="num">{{ qty_signed(r) }}</td><td>{{ r.from_loc or '' }}</td><td>{{ r.to_loc or '' }}</td>
+          <td class="small">{% if r.ref and r.ref.startswith('SHP-') %}<a href="{{ url_for('shipments_detail', sid=r.ref) }}">{{ r.ref }}</a>{% else %}{{ r.ref or '' }}{% endif %}</td>
+          <td class="muted small">{{ r.user }}</td></tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">No movements found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if rows|length == 500 %}<p class="muted small">Showing the latest 500.</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}{{ s.id }}{% endblock %}
+{% block heading %}<a class="back" href="{{ url_for('shipments') }}">Shipments</a> / {{ s.id }}{% endblock %}
+{% block actions %}{{ status_badge(s.status) }}{% endblock %}
+
+{% block content %}
+{% set flow = ['CREATED', 'PICKING', 'PACKED', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'] %}
+{% if s.status != 'CANCELLED' %}
+<div class="progress">
+  {% for st in flow %}
+    <div class="step {{ 'done' if flow.index(st) <= flow.index(s.status) }} {{ 'current' if st == s.status }}">
+      <span class="pip"></span><span>{{ st.replace('_', ' ')|title }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="grid2">
+  <section class="card">
+    <h2>Details</h2>
+    <dl class="details">
+      <dt>Customer</dt><dd>{{ s.customer }}</dd>
+      <dt>Address</dt><dd>{{ s.address }}</dd>
+      <dt>Carrier</dt><dd>{{ s.carrier or '–' }}</dd>
+      <dt>Tracking #</dt><dd>{{ s.tracking_no or '–' }}</dd>
+      <dt>Created</dt><dd>{{ s.created_at }}</dd>
+    </dl>
+    <h2>Items</h2>
+    <table><thead><tr><th>SKU</th><th>Name</th><th class="num">Qty</th></tr></thead>
+      <tbody>{% for i in items %}<tr><td>{{ i.sku }}</td><td>{{ i.name }}</td><td class="num">{{ i.qty }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+
+  <div>
+    <form class="card" method="post" action="{{ url_for('shipments_status', sid=s.id) }}">
+      <h2>Update status</h2>
+      {% if next_statuses %}
+        <label>Next status
+          <select name="status" required>
+            {% for st in next_statuses %}<option value="{{ st }}">{{ st.replace('_', ' ')|title }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Tracking number <input name="tracking_no" placeholder="{{ s.tracking_no or 'Add when shipped' }}"></label>
+        <label>Note <input name="note" placeholder="Optional"></label>
+        {% if 'SHIPPED' in next_statuses %}<p class="muted small">Marking as <strong>Shipped</strong> deducts the items from stock.</p>{% endif %}
+        <button class="btn">Update</button>
+      {% else %}
+        <p class="muted">This shipment is closed ({{ s.status|lower }}). No further changes.</p>
+      {% endif %}
+    </form>
+
+    <section class="card">
+      <h2>Tracking history</h2>
+      <ol class="timeline">
+        {% for e in events|reverse %}
+          <li><span class="tl-dot st-{{ e.status|lower }}"></span>
+            <div><strong>{{ e.status.replace('_', ' ')|title }}</strong>{% if e.note %} · {{ e.note }}{% endif %}
+            <div class="muted small">{{ e.ts }}</div></div></li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+</div>
+{% endblock %}
